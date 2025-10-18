@@ -69,3 +69,9 @@ Enables the creation of "seamless loop" videos and 3D-spin sequences at scale, f
 The entire pipeline, from motor control to final file, is designed as a single, cohesive system. The calculateRuntime feature in the HTML app directly informs the time intervals entered into the Python app, creating a perfect, data-driven workflow.
 ### Server-Space Reduction: 
 By generating tiny, seamless-loop videos (e.g., <500kb), the system allows the e-commerce site to host thousands of product videos without incurring massive server or CDN costs.
+
+# Softwares and Programming Languages Used:
+AutoDesk Inventor, Python, HTML, CSS, JavaScript
+
+# Hardware Used:
+NEMA17 Stepper Motors, Arduino UNO R3, TB6600 Stepper Motor Driver 
