@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stepper Motor Control with Asymmetric Gemstone Visualization</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #f0fff4, #e6f7ed); color: #2c3e50; min-height: 100vh; padding: 20px; line-height: 1.5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 25px; background: white; border-radius: 15px; box-shadow: 0 10极px 30px rgba(46, 204, 113, 0.15); }
+        header { text-align: center; margin-bottom: 25px; padding: 15px; }
+        h1 { font-size: 2.5rem; margin-bottom: 10px; color: #27ae60; background: linear-gradient(45deg, #27ae60, #2ecc71); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .config-section { display: flex; flex-wrap: wrap; gap: 25px; margin-bottom: 25px; padding: 20px; background: #f8fff9; border-radius: 12px; border: 1px solid #e0f7e9; }
+        .config-group { flex: 1; min-width: 250px; padding: 18px; background: white; border-radius: 10px; border: 1px solid #e0f7e9; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .config-group h3 { margin-bottom: 18px; color: #27ae60; font-size: 1.3rem; padding-bottom: 10px; border-bottom: 2px solid #e0f7e9; }
+        .config-item { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: #2c3e50; }
+        input[type="number"], select { width: 100%; padding: 12px; border: 2px solid #d5f5e3; border-radius: 8px; background: #f8fff9; color: #2c3e50; font-size: 1rem; transition: all 0.3s ease; }
+        input[type="number"]:focus, select:focus { border-color: #2ecc71; box-shadow: 0 0 0 3px rgba(46,204,113,0.2); }
+        .button-group { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; align-items: center; }
+        button { padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        button:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+        #add-step { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; }
+        #remove-all { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
+        #loop-btn { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        #download-code { background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; padding: 14px 26px; font-size: 1.1rem; }
+        #visualize-btn { background: linear-gradient(135deg, #e67e22, #d35400); color: white; padding: 14px 26px; font-size: 1.1rem; }
+        button.remove-btn { background: #e74c3c; color: white; padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; }
+        .steps-container { margin-bottom: 25px; padding: 20px; background: #f8fff9; border-radius: 12px; border: 1px solid #e0f7e9; }
+        .steps-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e0f7e9; flex-wrap: wrap; gap: 15px; }
+        .step-row { display: flex; align-items: center; gap: 15px; padding: 10px 15px; background: white; border-radius: 8px; margin-bottom: 10px; transition: all 0.3s ease; border: 1px solid #e0f7e9; min-height: 55px; }
+        .step-row.looped { background: #f5f8ff; border-left: 4px solid #3498db; }
+        .step-number { font-weight: bold; min-width: 70px; font-size: 1rem; color: #27ae60; }
+        .step-inputs { display: flex; align-items: center; gap: 15px; flex: 1; flex-wrap: wrap; }
+        .degrees-input { display: flex; align-items: center; gap: 8px; }
+        .degrees-input input { width: 90px; padding: 8px; border: 2px solid #d5f5e3; border-radius: 6px; background: #f8fff9; font-size: 0.95rem; }
+        .direction-group { display: flex; gap: 12px; }
+        .direction-group label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500; padding: 5px 10px; border-radius: 6px; background: #f8f9fa; transition: all 0.2s ease; margin: 0; font-size: 0.9rem; }
+        .code-output { padding: 22px; border-radius: 12px; background: #f8fff9; border: 1px solid #e0f7e9; }
+        .code-output h3 { margin-bottom: 18px; color: #27ae60; font-size: 1.5rem; }
+        pre { background: #2c3e50; color: #ecf0f1; padding: 18px; border-radius: 8px; overflow-x: auto; max-height: 350px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 0.95rem; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
+        .loop-modal { background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 700px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); }
+        .loop-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; padding-bottom: 15px; border-bottom: 2px solid #e0f7e9; }
+        .loop-steps { margin-bottom: 22px; max-height: 50vh; overflow-y: auto; padding: 12px; background: #f8fff9; border-radius: 10px; border: 1px solid #e0f7e9; }
+        .loop-step { display: flex; align-items: center; padding: 12px; background: white; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 3px 8px rgba(0,0,0,0.05); }
+        .loop-step input[type="checkbox"] { margin-right: 15px; width: 20px; height: 20px; cursor: pointer; accent-color: #2ecc71; }
+        .loop-controls { display: flex; gap: 15px; margin-top: 22px; }
+        .loop-controls input { flex: 1; padding: 12px; background: #f8fff9; border: 2px solid #d5极f5e3; border-radius: 8px; color: #2c3e50; font-size: 1rem; }
+        
+        /* 3D Visualization Styles */
+        .visualization-container { margin-top: 25px; padding: 20px; background: #f8fff9; border-radius: 12px; border: 1px solid #e0f7e9; }
+        .visualization-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .motor-3d-scene { position: relative; height: 400px; display: flex; justify-content: center; align-items: center; perspective: 1000px; background: linear-gradient(135deg, #ecf0f1, #bdc3c7); border-radius: 10px; overflow: hidden; }
+        .motor-assembly { position: relative; transform-style: preserve-3d; }
+        .motor-base { position: absolute; bottom: -180px; left: 50%; transform: translateX(-50%); width: 150px; height: 40px; background: linear-gradient(135deg, #7f8c8d, #95a5a6); border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .motor-shaft { position: absolute; bottom: -140px; left: 50%; transform: translateX(-50%); width: 15px; height: 200px; background: linear-gradient(135deg, #2c3e50, #34495e); border-radius: 3px; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
+        .gemstone-holder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transform-style: preserve-3d; transition: transform 1s ease-in-out; }
+        .gemstone-3d { position: relative; width: 100px; height: 150px; transform-style: preserve-3d; }
+        .gemstone-face { position: absolute; border: 1px solid rgba(255,255,255,0.3); }
+        .face-table { width: 50px; height: 50px; background: linear-gradient(135deg, #3498db, #2980b9); top: -25px; left: 25px; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+        .face-pavilion { width: 100px; height: 150px; background: linear-gradient(135deg, #1abc9c, #16a085); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
+        .face-culet { width: 10px; height: 10px; background: #e74c3c; bottom: -5px; left: 45px; border-radius: 50%; }
+        .lighting { position: absolute; top: 20px; left: 20px; width: 20px; height: 20px; background: radial-gradient(circle, #f39c12, transparent); border-radius: 50%; box-shadow: 0 0 30px #f39c12; }
+        .visualization-controls { display: flex; gap: 10px; margin-top: 15px; }
+        .step-indicator { margin-top: 10px; text-align: center; font-weight: bold; color: #27ae60; }
+        .runtime-display { background: #2c3e50; color: white; padding: 10px 15px; border-radius: 8px; font-weight: bold; margin-left: 10px; }
+        @media (max-width: 768px) {
+            .container { padding: 20px; }
+            .step-row { flex-direction: column; align-items: flex-start; gap: 12px; padding: 12px; }
+            .button-group { flex-direction: column; }
+            .motor-3d-scene { height: 300px; }
+            .runtime-display { margin: 10px 0; }
+        }
+	.drag-handle {
+    cursor: grab;
+    user-select: none;
+    font-size: 1.5rem;
+    margin-right: 12px;
+    color: #888;
+    padding: 0 6px;
+    transition: color 0.2s;
+}
+.drag-handle:active {
+    cursor: grabbing;
+    color: #27ae60;
+}
+.step-row.dragging {
+    opacity: 0.5;
+}
+.step-row.drag-over {
+    border: 2px dashed #27ae60;
+}
+.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 10; /* ensures it stays above other content */
+    background: #f8fff9; /* match your panel's background */
+    box-shadow: 0 2px 8px rgba(46,204,113,0.05); /* optional: subtle shadow when sticky */
+}
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚙️ Stepper Motor Control</h1>
+            <p>Compact interface for efficient motor programming with asymmetric gemstone visualization</p>
+        </header>
+        <div class="config-section">
+            <div class="config-group">
+                <h3>⚡ Motor Configuration</h3>
+                <div class="config-item">
+                    <label for="stepDelay">⏱️ Step Delay (μs)</label>
+                    <input type="number" id="stepDelay" min="1" value="600">
+                </div>
+                <div class="config-item">
+                    <label for="stepsPerRev">⚙️ Steps per Revolution</label>
+                    <select id="stepsPerRev">
+                        <option value="200">200 (Full Step)</option>
+                        <option value="400">400 (1/2)</option>
+                        <option value="800">800 (1/4)</option>
+                        <option value="1600">1600 (1/8)</option>
+                        <option value="3200">3200 (1/16)</option>
+                        <option value="6400" selected>6400 (1/32)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="steps-container">
+            <div class="steps-header sticky-header">
+                <h2>📋 Motor Steps</h2>
+                <div class="button-group">
+                    <button id="add-step">➕ Add Step</button>
+		    <button id="add-delay">⏸️ Add Delay</button>
+                    <button id="remove-all">🗑️ Remove All</button>
+                    <button id="loop-btn">🔄 Loop Mode</button>
+                </div>
+            </div>
+            <div id="steps-list"></div>
+        </div>
+        <div class="button-group">
+            <button id="download-code">💾 Download Arduino Code</button>
+            <button id="visualize-btn">👁️ Visualize Rotation</button>
+            <div class="runtime-display" id="runtime-display">Total Runtime: 0.00s</div>
+        </div>
+        <div class="code-output">
+            <h3>📄 Generated Code</h3>
+            <pre><code id="code-display">// Your generated code will appear here</code></pre>
+        </div>
+        
+        <!-- 3D Visualization Container -->
+        <div class="visualization-container">
+            <div class="visualization-header">
+                <h3>💎 Asymmetric Gemstone Rotation Visualization</h3>
+            </div>
+            <div class="motor-3d-scene">
+                <div class="lighting"></div>
+                <div class="motor-assembly">
+                    <div class="motor-base"></div>
+                    <div class="motor-shaft"></div>
+                    <div class="gemstone-holder" id="gemstone-holder">
+                        <div class="gemstone-3d">
+                            <div class="gemstone-face face-table"></div>
+                            <div class="gemstone-face face-pavilion"></div>
+                            <div class="gemstone-face face-culet"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="step-indicator" id="step-indicator">Ready to visualize 3D rotation</div>
+            <div class="visualization-controls">
+                <button id="start-visualization">▶️ Start 3D Visualization</button>
+                <button id="reset-visualization">🔄 Reset Position</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loop Mode Overlay -->
+    <div class="overlay" id="loop-overlay">
+        <div class="loop-modal">
+            <div class="loop-header">
+                <h2>🔄 Loop Configuration</h2>
+                <button id="close-loop">❌</button>
+            </div>
+            <div class="loop-steps" id="loop-steps-list"></div>
+            <div class="loop-controls">
+                <input type="number" id="loop-count" min="1" value="1" placeholder="Loop count">
+                <button id="apply-loop">✅ Apply Loop</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let stepsData = [];
+        let stepCounter = 0;
+        let generatedCode = '';
+        const STEP_PIN = 8;
+        const DIR_PIN = 9;
+        const stepsList = document.getElementById('steps-list');
+        const addStepBtn = document.getElementById('add-step');
+	const addDelayBtn = document.getElementById('add-delay');
+        const removeAllBtn = document.getElementById('remove-all');
+        const loopBtn = document.getElementById('loop-btn');
+        const downloadBtn = document.getElementById('download-code');
+        const visualizeBtn = document.getElementById('visualize-btn');
+        const loopOverlay = document.getElementById('loop-overlay');
+        const closeLoopBtn = document.getElementById('close-loop');
+        const applyLoopBtn = document.getElementById('apply-loop');
+        const loopStepsList = document.getElementById('loop-steps-list');
+        const codeDisplay = document.getElementById('code-display');
+        const gemstoneHolder = document.getElementById('gemstone-holder');
+        const startVisualizationBtn = document.getElementById('start-visualization');
+        const resetVisualizationBtn = document.getElementById('reset-visualization');
+        const stepIndicator = document.getElementById('step-indicator');
+        const runtimeDisplay = document.getElementById('runtime-display');
+	let draggedIndex = null;
+        
+        let currentRotationY = 0;
+        let visualizationTimeout;
+        
+        // Initialize
+        addStepRow();
+        calculateRuntime();
+        
+        // Event listeners
+        addStepBtn.addEventListener('click', addStepRow);
+	addDelayBtn.addEventListener('click', addDelayRow);
+        removeAllBtn.addEventListener('click', removeAllSteps);
+        loopBtn.addEventListener('click', openLoopMode);
+        closeLoopBtn.addEventListener('click', closeLoopMode);
+        applyLoopBtn.addEventListener('click', applyLoop);
+        downloadBtn.addEventListener('click', generateAndSaveCode);
+        visualizeBtn.addEventListener('click', showVisualization);
+        startVisualizationBtn.addEventListener('click', startVisualization);
+        resetVisualizationBtn.addEventListener('click', resetVisualization);
+        
+        // Runtime calculation listeners
+        document.getElementById('stepDelay').addEventListener('input', calculateRuntime);
+        document.getElementById('stepsPerRev').addEventListener('change', calculateRuntime);
+
+	function addDelayRow() {
+    		stepCounter++;
+    		stepsData.push({id: stepCounter, type: 'delay', seconds: 1, isLooped: false});
+    		renderSteps();
+   		 calculateRuntime();
+		}
+
+        
+        function addStepRow() {
+    stepCounter++;
+    stepsData.push({id: stepCounter, type: 'move', degrees: 90, direction: 'cw', isLooped: false});
+    renderSteps();
+    calculateRuntime();
+}
+
+        
+        function removeAllSteps() {
+            if (stepsData.length === 0) return;
+            if (confirm("Are you sure you want to remove all steps?")) {
+                stepsData = [];
+                stepCounter = 0;
+                renderSteps();
+                calculateRuntime();
+            }
+        }
+        
+        function removeStep(stepId) {
+            stepsData = stepsData.filter(step => step.id !== stepId);
+            renderSteps();
+            calculateRuntime();
+        }
+        
+        function renderSteps() {
+    stepsList.innerHTML = '';
+
+    stepsData.forEach((step, index) => {
+        const stepRow = document.createElement('div');
+        stepRow.className = `step-row ${step.isLooped ? 'looped' : ''}`;
+        stepRow.id = `step-${step.id}`;
+        stepRow.setAttribute('draggable', 'true');
+        stepRow.setAttribute('data-index', index);
+
+        // Add drag handle at the start
+        let rowInner = `
+            <div class="drag-handle" title="Drag to reorder">⠿</div>
+        `;
+
+        if (step.type === 'move') {
+            rowInner += `
+                <div class="step-number">➡️ ${index + 1}</div>
+                <div class="step-inputs">
+                    <div class="degrees-input">
+                        <label>Degrees:</label>
+                        <input type="text" class="degrees" value="${step.degrees}" data-step-id="${step.id}">
+                    </div>
+                    <div class="direction-group">
+                        <label>
+                            <input type="radio" name="direction-${step.id}" value="cw" ${step.direction === 'cw' ? 'checked' : ''} data-step-id="${step.id}">CW
+                        </label>
+                        <label>
+                            <input type="radio" name="direction-${step.id}" value="ccw" ${step.direction === 'ccw' ? 'checked' : ''} data-step-id="${step.id}">CCW
+                        </label>
+                    </div>
+                </div>
+                <button class="remove-btn" data-step-id="${step.id}">🗑️</button>
+            `;
+        } else if (step.type === 'delay') {
+            rowInner += `
+                <div class="step-number">⏸️ ${index + 1}</div>
+                <div class="step-inputs">
+                    <div class="degrees-input">
+                        <label>Delay (s):</label>
+                        <input type="text" class="delay-seconds" value="${step.seconds}" data-step-id="${step.id}">
+                    </div>
+                    <span style="color:#888;">(Pause)</span>
+                </div>
+                <button class="remove-btn" data-step-id="${step.id}">🗑️</button>
+            `;
+        }
+
+        stepRow.innerHTML = rowInner;
+        stepsList.appendChild(stepRow);
+
+        // --- Drag and Drop Events ---
+        stepRow.addEventListener('dragstart', (e) => {
+            draggedIndex = index;
+            stepRow.classList.add('dragging');
+        });
+        stepRow.addEventListener('dragend', (e) => {
+            draggedIndex = null;
+            stepRow.classList.remove('dragging');
+            document.querySelectorAll('.step-row').forEach(row => row.classList.remove('drag-over'));
+        });
+        stepRow.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (draggedIndex === null || draggedIndex === index) return;
+            stepRow.classList.add('drag-over');
+        });
+        stepRow.addEventListener('dragleave', (e) => {
+            stepRow.classList.remove('drag-over');
+        });
+        stepRow.addEventListener('drop', (e) => {
+            e.preventDefault();
+            stepRow.classList.remove('drag-over');
+            if (draggedIndex === null || draggedIndex === index) return;
+            // Move the dragged item in stepsData
+            const movedStep = stepsData.splice(draggedIndex, 1)[0];
+            stepsData.splice(index, 0, movedStep);
+            renderSteps();
+            calculateRuntime();
+        });
+
+        // --- Existing Listeners ---
+        if (step.type === 'move') {
+            const degreesInput = stepRow.querySelector('.degrees');
+            degreesInput.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9.]/g, '');
+                const stepId = parseInt(this.getAttribute('data-step-id'));
+                const step = stepsData.find(s => s.id === stepId);
+                if (step) {
+                    step.degrees = parseFloat(this.value) || 0;
+                    calculateRuntime();
+                }
+            });
+            const directionRadios = stepRow.querySelectorAll(`input[name="direction-${step.id}"]`);
+            directionRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.checked) {
+                        const stepId = parseInt(this.getAttribute('data-step-id'));
+                        const step = stepsData.find(s => s.id === stepId);
+                        if (step) {
+                            step.direction = this.value;
+                            calculateRuntime();
+                        }
+                    }
+                });
+            });
+        } else if (step.type === 'delay') {
+            const delayInput = stepRow.querySelector('.delay-seconds');
+            delayInput.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9.]/g, '');
+                const stepId = parseInt(this.getAttribute('data-step-id'));
+                const step = stepsData.find(s => s.id === stepId);
+                if (step) {
+                    step.seconds = parseFloat(this.value) || 0;
+                    calculateRuntime();
+                }
+            });
+        }
+
+        const removeBtn = stepRow.querySelector('.remove-btn');
+        removeBtn.addEventListener('click', function() {
+            const stepId = parseInt(this.getAttribute('data-step-id'));
+            removeStep(stepId);
+        });
+    });
+}
+
+        function openLoopMode() {
+            if (stepsData.length === 0) {
+                alert('Please add at least one step first');
+                return;
+            }
+            updateStepDataFromUI();
+            document.body.style.overflow = 'hidden';
+            loopStepsList.innerHTML = '';
+            stepsData.forEach((step, index) => {
+    const loopStep = document.createElement('div');
+    loopStep.className = 'loop-step';
+    let labelText = '';
+    if (step.type === 'move') {
+        labelText = `Step ${index + 1}: ${step.degrees}° ${step.direction.toUpperCase()}`;
+    } else if (step.type === 'delay') {
+        labelText = `Step ${index + 1}: Delay ${step.seconds}s`;
+    }
+    loopStep.innerHTML = `
+        <input type="checkbox" id="loop-step-${step.id}" data-step-id="${step.id}" data-index="${index}">
+        <label for="loop-step-${step.id}">${labelText}</label>
+    `;
+    loopStepsList.appendChild(loopStep);
+});
+            loopOverlay.style.display = 'flex';
+        }
+        
+        function closeLoopMode() {
+            loopOverlay.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+        
+        function updateStepDataFromUI() {
+            stepsData.forEach(step => {
+                const stepRow = document.getElementById(`step-${step.id}`);
+                if (stepRow) {
+                    const degreesInput = stepRow.querySelector('.degrees');
+                    const directionRadio = stepRow.querySelector(`input[name="direction-${step.id}"]:checked`);
+                    if (degreesInput) step.degrees = parseFloat(degreesInput.value) || 0;
+                    if (directionRadio) step.direction = directionRadio.value;
+                }
+            });
+        }
+        
+        function groupConsecutiveIndices(indices) {
+            if (indices.length === 0) return [];
+            indices.sort((a, b) => a - b);
+            let groups = [];
+            let currentGroup = [indices[0]];
+            for (let i = 1; i < indices.length; i++) {
+                if (indices[i] === indices[i-1] + 1) {
+                    currentGroup.push(indices[i]);
+                } else {
+                    groups.push([...currentGroup]);
+                    currentGroup = [indices[i]];
+                }
+            }
+            groups.push([...currentGroup]);
+            return groups;
+        }
+        
+        function applyLoop() {
+            const loopCount = parseInt(document.getElementById('loop-count').value) || 1;
+            const selectedCheckboxes = Array.from(document.querySelectorAll('#loop-steps-list input[type="checkbox"]:checked'));
+            if (selectedCheckboxes.length === 0) {
+                alert('Please select at least one step to loop');
+                return;
+            }
+            if (loopCount < 1) {
+                alert('Loop count must be at least 1');
+                return;
+            }
+            const selectedIndices = selectedCheckboxes.map(checkbox => parseInt(checkbox.getAttribute('data-index')));
+            const blockGroups = groupConsecutiveIndices(selectedIndices);
+            const newStepsData = [];
+            for (let i = 0; i < stepsData.length; i++) {
+                let inGroup = false;
+                let currentGroup = null;
+                for (const group of blockGroups) {
+                    if (group.includes(i)) {
+                        inGroup = true;
+                        currentGroup = group;
+                        break;
+                    }
+                }
+                if (inGroup) {
+                    if (currentGroup[0] === i) {
+                        for (const index of currentGroup) {
+                            newStepsData.push({...stepsData[index]});
+                        }
+                        for (let j = 1; j < loopCount; j++) {
+                            for (const index of currentGroup) {
+                                stepCounter++;
+                               newStepsData.push({...stepsData[index], isLooped: true, id: ++stepCounter});
+                            }
+                        }
+                        i = currentGroup[currentGroup.length - 1];
+                    }
+                } else {
+                    newStepsData.push({...stepsData[i]});
+                }
+            }
+            stepsData = newStepsData;
+            renderSteps();
+            calculateRuntime();
+            closeLoopMode();
+        }
+        
+        function generateAndSaveCode() {
+            if (stepsData.length === 0) {
+                alert('Please add at least one step');
+                return;
+            }
+            updateStepDataFromUI();
+            generateCode();
+            let filename = `stepper_motor_${new Date().getTime()}.ino`;
+            if (window.showSaveFilePicker) {
+                (async () => {
+                    try {
+                        const opts = {
+                            suggestedName: filename,
+                            types: [{ description: 'Arduino Sketch', accept: {'text/plain': ['.ino']} }]
+                        };
+                        const handle = await window.showSaveFilePicker(opts);
+                        const writable = await handle.createWritable();
+                        await writable.write(generatedCode);
+                        await writable.close();
+                    } catch (e) { }
+                })();
+            } else {
+                const blob = new Blob([generatedCode], { type: 'text/plain' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+                alert("If you were not prompted for a save location, check your browser's settings or use Chrome/Edge for full support.");
+            }
+        }
+        
+        function generateCode() {
+    const stepDelay = document.getElementById('stepDelay').value;
+    const stepsPerRev = document.getElementById('stepsPerRev').value;
+    let code = `const int stepPin = ${STEP_PIN}; // PUL- connected here (active-low)\n`;
+    code += `const int dirPin = ${DIR_PIN};  // DIR- connected here\n`;
+    code += `const int stepDelay = ${stepDelay}; // Speed control (microseconds)\n`;
+    code += `const float STEPS_PER_REV = ${stepsPerRev}; // Microstepping configuration\n\n`;
+    code += `void setup() {\n`;
+    code += `  pinMode(stepPin, OUTPUT);\n`;
+    code += `  pinMode(dirPin, OUTPUT);\n\n`;
+    code += `  // User-defined rotations\n`;
+
+    // --- START OF MODIFIED SECTION ---
+    let elapsedMicroseconds = 0;
+stepsData.forEach((step, index) => {
+    if (step.type === 'move') {
+        const stepsInMovement = Math.round((step.degrees / 360) * stepsPerRev);
+        const stepTime = stepsInMovement * 2 * stepDelay; // μs
+        elapsedMicroseconds += stepTime;
+        const elapsedSeconds = (elapsedMicroseconds / 1000000).toFixed(3);
+        code += `  rotateStepper(${step.degrees}, ${step.direction === 'cw' ? 'true' : 'false'}); // Step ${index + 1}: ${step.degrees}° ${step.direction.toUpperCase()} (Elapsed: ${elapsedSeconds}s)\n`;
+    } else if (step.type === 'delay') {
+        const delayMs = Math.round((step.seconds || 0) * 1000);
+        elapsedMicroseconds += delayMs * 1000;
+        const elapsedSeconds = (elapsedMicroseconds / 1000000).toFixed(3);
+        code += `  delay(${delayMs}); // Step ${index + 1}: Delay ${step.seconds}s (Elapsed: ${elapsedSeconds}s)\n`;
+    }
+});
+
+    // --- END OF MODIFIED SECTION ---
+
+    code += `}\n\n`;
+    code += `void loop() {\n  // Do nothing\n}\n\n`;
+    code += `// Stepper rotation function with degree conversion\n`;
+    code += `void rotateStepper(float degrees, bool clockwise) {\n`;
+    code += `  int steps = round((degrees / 360.0) * STEPS_PER_REV);\n`;
+    code += `  digitalWrite(dirPin, clockwise ? HIGH : LOW);\n`;
+    code += `  for (int i = 0; i < steps; i++) {\n`;
+    code += `    digitalWrite(stepPin, LOW);\n`;
+    code += `    delayMicroseconds(stepDelay);\n`;
+    code += `    digitalWrite(stepPin, HIGH);\n`;
+    code += `    delayMicroseconds(stepDelay);\n`;
+    code += `  }\n}`;
+    generatedCode = code;
+    codeDisplay.textContent = code;
+}
+
+        
+        function showVisualization() {
+            if (stepsData.length === 0) {
+                alert('Please add at least one step to visualize');
+                return;
+            }
+            document.querySelector('.visualization-container').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function startVisualization() {
+            if (stepsData.length === 0) {
+                alert('Please add at least one step to visualize');
+                return;
+            }
+            
+            resetVisualization();
+            visualizeStep(0);
+        }
+        
+        function visualizeStep(stepIndex) {
+    if (stepIndex >= stepsData.length) {
+        stepIndicator.textContent = "🎉 3D Visualization complete!";
+        return;
+    }
+    const step = stepsData[stepIndex];
+    if (step.type === 'move') {
+        stepIndicator.textContent = `🔄 Executing Step ${stepIndex + 1}: ${step.degrees}° ${step.direction.toUpperCase()}`;
+        const rotationDirection = step.direction === 'cw' ? 1 : -1;
+        currentRotationY += step.degrees * rotationDirection;
+        gemstoneHolder.style.transition = `transform 1.5s ease-in-out`;
+        gemstoneHolder.style.transform = `translate(-50%, -50%) rotateY(${currentRotationY}deg)`;
+        const stepDelay = parseInt(document.getElementById('stepDelay').value) || 600;
+        const visualizationSpeed = Math.max(800, Math.min(2500, stepDelay * 3));
+        visualizationTimeout = setTimeout(() => {
+            visualizeStep(stepIndex + 1);
+        }, visualizationSpeed);
+    } else if (step.type === 'delay') {
+        stepIndicator.textContent = `⏸️ Pausing for ${step.seconds} seconds (Step ${stepIndex + 1})`;
+        visualizationTimeout = setTimeout(() => {
+            visualizeStep(stepIndex + 1);
+        }, (step.seconds || 1) * 1000);
+    }
+}
+
+        
+        function resetVisualization() {
+            clearTimeout(visualizationTimeout);
+            currentRotationY = 0;
+            gemstoneHolder.style.transition = 'transform 1s ease';
+            gemstoneHolder.style.transform = 'translate(-50%, -50%) rotateY(0deg)';
+            stepIndicator.textContent = "🔄 3D Visualization reset to initial position";
+        }
+        
+        function calculateRuntime() {
+            if (stepsData.length === 0) {
+                runtimeDisplay.textContent = "Total Runtime: 0.00s";
+                return;
+            }
+            
+            const stepDelay = parseInt(document.getElementById('stepDelay').value) || 600;
+            const stepsPerRev = parseInt(document.getElementById('stepsPerRev').value) || 1600;
+            
+            let totalMicroseconds = 0;
+            
+            for (const step of stepsData) {
+    if (step.type === 'move') {
+        const stepsInMovement = Math.round((step.degrees / 360) * stepsPerRev);
+        totalMicroseconds += stepsInMovement * 2 * stepDelay;
+    } else if (step.type === 'delay') {
+        totalMicroseconds += (step.seconds || 0) * 1000000;
+    }
+}
+
+            
+            const totalSeconds = totalMicroseconds / 1000000;
+            runtimeDisplay.textContent = `Total Runtime: ${totalSeconds.toFixed(3)}s`;
+        }
+    });
+    </script>
+</body>
+</html>
